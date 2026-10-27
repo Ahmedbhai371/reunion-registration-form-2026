@@ -84,37 +84,105 @@ $('total').textContent=money(total);$('singleN').textContent=bn(s);$('doubleN').
 ['single','double','child'].forEach(id=>$(id).addEventListener('input',update));
 document.querySelectorAll('input[name="payment"]').forEach(el=>el.addEventListener('change',()=>{const v=document.querySelector('input[name="payment"]:checked').value;const map={gateway:'<strong>নিরাপদ অনলাইন পেমেন্ট</strong><br>রেজিস্ট্রেশন জমা দেওয়ার পর SSLCommerz checkout-এ bKash, Nagad বা কার্ড বেছে নিন। লাইভ করার জন্য .env-এ merchant credentials লাগবে।',Later:'<strong>পরে পেমেন্ট</strong><br>আপনার রেজিস্ট্রেশন তথ্য ডেটাবেসে জমা হবে এবং পেমেন্ট Pending থাকবে।'};$('payInstructions').innerHTML=map[v]}));
 $('date').value=new Date().toISOString().slice(0,10); update();
-$('regForm').addEventListener('submit',async e=>{
- e.preventDefault();
- if(!$('regForm').reportValidity()) return;
- const status=$('apiStatus'); status.style.display='block'; status.textContent='রেজিস্ট্রেশন জমা হচ্ছে…';
- const s=count('single'),d=count('double'),c=count('child');
- const payment=document.querySelector('input[name="payment"]:checked').value;
- const shirt=document.querySelector('input[name="shirt"]:checked')?.value||'';
- const payload={
-   batch:$('batch').value.trim(),form_date:$('date').value,name:$('name').value.trim(),
-   phone:$('phone').value.trim(),email:$('email').value.trim(),current_address:$('current').value.trim(),
-   permanent_address:$('permanent').value.trim(),blood_group:$('blood').value,marital_status:$('marital').value,
-   profession:$('profession').value.trim(),designation:$('designation').value.trim(),institution:$('institution').value.trim(),
-   single_count:s,double_count:d,child_count:c,shirt_size:shirt,note:$('note').value.trim(),
-   payment_method:payment,payer_name:$('payer').value.trim(),payer_phone:$('payerPhone').value.trim()
- };
- try {
-   const r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-   const data=await r.json();
-   if(!r.ok) throw new Error(data.error||'রেজিস্ট্রেশন জমা দেওয়া যায়নি।');
-   if(payment==='gateway'){
-     status.textContent='রেজিস্ট্রেশন তৈরি হয়েছে। নিরাপদ পেমেন্ট পেজে নেওয়া হচ্ছে…';
-     const pr=await fetch('/api/payment/initiate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({registrationId:data.registrationId})});
-     const pd=await pr.json();
-     if(!pr.ok) throw new Error(pd.error||'পেমেন্ট সেশন তৈরি হয়নি।');
-     window.location.href=pd.checkoutUrl; return;
-   }
-   const total=s*1020+d*2*1020+c*710;
-   $('receiptContent').innerHTML=`<p><b>রেজিস্ট্রেশন আইডি:</b> <code>${String(data.registrationId).replace(/[&<>"]/g,'')}</code></p><p><b>নাম:</b> ${String(payload.name).replace(/[&<>"]/g,'')}<br><b>ব্যাচ:</b> ${String(payload.batch).replace(/[&<>"]/g,'')}<br><b>মোবাইল:</b> ${String(payload.phone).replace(/[&<>"]/g,'')}<br><b>অংশগ্রহণকারী:</b> ${bn(s+d*2+c)} জন<br><b>টি-শার্ট:</b> ${String(shirt||'নির্বাচিত নয়').replace(/[&<>"]/g,'')}<br><b>পেমেন্ট স্ট্যাটাস:</b> Pending<br><b>মোট ফি:</b> ${money(total)}</p><p>রেজিস্ট্রেশন সার্ভারে জমা হয়েছে। পেমেন্ট/রেজিস্ট্রেশন চূড়ান্ত করতে আয়োজক কমিটির নিশ্চিতকরণ প্রয়োজন।</p>`;
-   $('receipt').classList.add('show'); status.textContent='রেজিস্ট্রেশন সফলভাবে জমা হয়েছে। পেমেন্ট স্ট্যাটাস: Pending।';
-   $('receipt').scrollIntoView({behavior:'smooth',block:'center'});
- } catch(err) {
-   status.textContent='সমস্যা: '+err.message+' — সার্ভার সেটআপ ও .env কনফিগারেশন পরীক্ষা করুন।';
- }
+$(
+$('regForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  if (!$('regForm').reportValidity()) return;
+
+  const statusBox = $('apiStatus');
+  statusBox.style.display = 'block';
+  statusBox.textContent = 'রেজিস্ট্রেশন জমা হচ্ছে…';
+
+  const s = count('single');
+  const d = count('double');
+  const c = count('child');
+  const shirt =
+    document.querySelector('input[name="shirt"]:checked')?.value || '';
+
+  const registrationCode = crypto.randomUUID();
+
+  const payload = {
+    registration_code: registrationCode,
+    batch: $('batch').value.trim(),
+    form_date: $('date').value,
+    name: $('name').value.trim(),
+    phone: $('phone').value.trim(),
+    email: $('email').value.trim() || null,
+    current_address: $('current').value.trim(),
+    permanent_address: $('permanent').value.trim() || null,
+    blood_group: $('blood').value || null,
+    marital_status: $('marital').value || null,
+    profession: $('profession').value.trim() || null,
+    designation: $('designation').value.trim() || null,
+    institution: $('institution').value.trim() || null,
+    single_count: s,
+    double_count: d,
+    child_count: c,
+    shirt_size: shirt || null,
+    note: $('note').value.trim() || null,
+    payment_method: 'Later',
+    payer_name: $('payer').value.trim() || null,
+    payer_phone: $('payerPhone').value.trim() || null,
+    transaction_id: $('txn').value.trim() || null
+  };
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/registrations`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'তথ্য জমা দেওয়া যায়নি');
+    }
+
+    const escapeHTML = value =>
+      String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+
+    const total = s * 1020 + d * 2040 + c * 710;
+
+    $('receiptContent').innerHTML = `
+      <p><b>রেজিস্ট্রেশন রেফারেন্স:</b>
+      <code>${escapeHTML(registrationCode)}</code></p>
+      <p><b>নাম:</b> ${escapeHTML(payload.name)}<br>
+      <b>ব্যাচ:</b> ${escapeHTML(payload.batch)}<br>
+      <b>মোবাইল:</b> ${escapeHTML(payload.phone)}<br>
+      <b>অংশগ্রহণকারী:</b> ${bn(s + d * 2 + c)} জন<br>
+      <b>টি-শার্ট:</b> ${escapeHTML(shirt || 'নির্বাচিত নয়')}<br>
+      <b>পেমেন্ট:</b> Pending<br>
+      <b>মোট ফি:</b> ${money(total)}</p>
+      <p>রেজিস্ট্রেশন তথ্য জমা হয়েছে।
+      আয়োজক কমিটির নিশ্চিতকরণ প্রয়োজন।</p>
+    `;
+
+    $('receipt').classList.add('show');
+    statusBox.textContent = 'রেজিস্ট্রেশন সফলভাবে জমা হয়েছে!';
+    $('receipt').scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+
+  } catch (error) {
+    statusBox.textContent =
+      'সমস্যা: ' + error.message;
+  }
+});
+
 });</script></body></html>
