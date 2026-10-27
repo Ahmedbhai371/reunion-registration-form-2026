@@ -74,7 +74,9 @@ main{max-width:1080px;margin:-34px auto 0;padding:0 16px 48px;position:relative;
 <footer class="footer"><strong>১২ যুগপূর্তি পুনর্মিলনী ২০২৬</strong><br>ফুলপুর পাইলট মডেল সরকারি উচ্চ বিদ্যালয় • বিদ্যালয় প্রাঙ্গণ<br>সহায়তা ও ফি নিশ্চিতকরণের জন্য আয়োজক কমিটির সঙ্গে যোগাযোগ করুন।<br><a href="/admin.html">আয়োজক অ্যাডমিন লগইন</a></footer>
 </div>
 <script>
-const $=id=>document.getElementById(id); const adultFee=1020, childFee=710;
+const $=id=>document.getElementById(id);const SUPABASE_URL = 'YOUR_PROJECT_URL';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_sEXqmQXmOqVVIuLotdOw5A_I2RqKtlM';
+  const adultFee=1020, childFee=710;
 const bn=n=>new Intl.NumberFormat('bn-BD').format(n); const money=n=>'৳ '+bn(n);
 function count(id){return Math.max(0,Math.min(20,parseInt($(id).value||0,10)||0))}
 function update(){let s=count('single'),d=count('double'),c=count('child');let sc=s*adultFee,dc=d*2*adultFee,cc=c*childFee,total=sc+dc+cc,people=s+d*2+c;
